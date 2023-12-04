@@ -1,9 +1,25 @@
+import dataclasses
+from typing import Set, Dict
+
 import networkx as nx
 
 from ._labels import (
     CLUSTER_LABEL_NOISE,
     CLUSTER_LABEL_UNCLASSIFIED
 )
+
+
+@dataclasses.dataclass(frozen=True)
+class MergeOperation:
+    source: int
+    destination: int
+
+
+@dataclasses.dataclass
+class InsertionModifications:
+    added: Set[int] = dataclasses.field(default_factory=set)
+    merged: Set[MergeOperation] = dataclasses.field(default_factory=set)
+    expanded: Dict[int, Set] = dataclasses.field(default_factory=dict)
 
 
 class Inserter:
@@ -13,6 +29,7 @@ class Inserter:
         self.objects = objects
 
     def insert(self, object_value):
+        operations = InsertionModifications()
         object_inserted = self.objects.insert_object(object_value)
 
         new_core_neighbors, old_core_neighbors = \
@@ -32,6 +49,10 @@ class Inserter:
                     self.objects.get_label(obj) for obj in old_core_neighbors
                 ])
 
+                if label_of_new_object not in operations.expanded:
+                    operations.expanded[label_of_new_object] = set()
+
+                operations.expanded[label_of_new_object].add(object_inserted.id)
             else:
                 # If the new object does not have any core neighbors,
                 # it becomes a noise. Called case "Noise" in the paper.
@@ -57,6 +78,7 @@ class Inserter:
 
                 next_cluster_label = self.objects.get_next_cluster_label()
                 self.objects.set_labels(component, next_cluster_label)
+                operations.added.add(next_cluster_label)
 
             else:
                 # If in a connected component of update seeds there are
@@ -68,6 +90,9 @@ class Inserter:
                 self.objects.set_labels(component, max_label)
 
                 for label in effective_cluster_labels:
+                    if label != max_label:
+                        operations.merged.add(MergeOperation(source=label, destination=max_label))
+
                     self.objects.change_labels(label, max_label)
 
         # Finally all neighbors of each new core object inherits a label from
@@ -75,6 +100,8 @@ class Inserter:
         # and the object being inserted.
 
         self._set_cluster_label_around_new_core_neighbors(new_core_neighbors)
+
+        return operations
 
     def _separate_core_neighbors_by_novelty(self, object_inserted):
         new_cores = set()
