@@ -1,4 +1,6 @@
-ObjectId = int
+from typing import Union
+
+ObjectId = Union[int, str]
 
 
 class Object:

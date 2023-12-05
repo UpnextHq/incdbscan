@@ -28,9 +28,9 @@ class Inserter:
         self.min_pts = min_pts
         self.objects = objects
 
-    def insert(self, object_value):
+    def insert(self, object_value, id_=None):
         operations = InsertionModifications()
-        object_inserted = self.objects.insert_object(object_value)
+        object_inserted = self.objects.insert_object(object_value, id_)
 
         new_core_neighbors, old_core_neighbors = \
             self._separate_core_neighbors_by_novelty(object_inserted)

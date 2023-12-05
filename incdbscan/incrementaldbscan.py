@@ -1,9 +1,11 @@
 import warnings
+from typing import Iterable, List
 
 import numpy as np
 
 from ._deleter import Deleter
 from ._inserter import Inserter
+from ._object import ObjectId
 from ._objects import Objects
 from ._utils import input_check
 
@@ -59,13 +61,16 @@ class IncrementalDBSCAN:
         self._inserter = Inserter(self.eps, self.min_pts, self._objects)
         self._deleter = Deleter(self.eps, self.min_pts, self._objects)
 
-    def insert(self, X):
+    def insert(self, X, ids=None):
         """Insert objects into the object set, then update clustering.
 
         Parameters
         ----------
         X : array-like of shape (n_samples, n_features)
             The data objects to be inserted into the object set.
+        ids : array-like of shape (n_samples,), optional
+            The custom IDs for the data objects. If not provided, IDs will
+            be generated based on hashing.
 
         Returns
         -------
@@ -73,11 +78,17 @@ class IncrementalDBSCAN:
 
         """
         X = input_check(X)
+        if ids is not None and len(ids) != len(X):
+            raise ValueError("The length of IDs must match the length of X")
 
-        for value in X:
-            self._inserter.insert(value)
+        modifications = []
+        for ix, value in enumerate(X):
+            id_ = ids[ix] if ids is not None else None
 
-        return self
+            mods = self._inserter.insert(value, id_)
+            modifications.append(mods)
+
+        return mods
 
     def delete(self, X):
         """Delete objects from object set, then update clustering.
@@ -106,6 +117,32 @@ class IncrementalDBSCAN:
                         f'Object at position {ix} was not deleted because '
                         'there is no such object in the object set.'
                     )
+                )
+
+        return self
+
+    def delete_by_ids(self, ids):
+        """Delete objects from the object set by their IDs, then update clustering.
+
+        Parameters
+        ----------
+        ids : array-like
+            The IDs of the data objects to be deleted from the object set.
+
+        Returns
+        -------
+        self
+
+        """
+        if not isinstance(ids, (list, np.ndarray)):
+            raise ValueError("IDs should be a list or numpy array")
+
+        for id_ in ids:
+            try:
+                self._objects.delete_object_by_id(id_)
+            except ValueError as e:
+                warnings.warn(
+                    IncrementalDBSCANWarning(str(e))
                 )
 
         return self
@@ -149,6 +186,42 @@ class IncrementalDBSCAN:
 
         return labels
 
+    def get_cluster_labels_by_ids(self, ids: List[ObjectId]):
+        """Get cluster labels of objects.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The data objects to get labels for.
+
+        Returns
+        -------
+        labels : ndarray of shape (n_samples,)
+                 Cluster labels. Effective labels start from 0. -1 means the
+                 object is noise. numpy.nan means the object was not in the
+                 object set.
+
+        """
+        labels = np.zeros(len(ids))
+
+        for ix, value in enumerate(ids):
+            obj = self._objects.get_object_by_id(value)
+
+            if obj:
+                label = self._objects.get_label(obj)
+
+            else:
+                label = np.nan
+                warnings.warn(
+                    IncrementalDBSCANWarning(
+                        f'No label was retrieved for object at position {ix} '
+                        'because there is no such object in the object set.'
+                    )
+                )
+
+            labels[ix] = label
+
+        return labels
 
 class IncrementalDBSCANWarning(Warning):
     pass

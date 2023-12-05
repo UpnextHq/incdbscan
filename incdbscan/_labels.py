@@ -7,7 +7,7 @@ CLUSTER_LABEL_UNCLASSIFIED: ClusterLabel = -2
 CLUSTER_LABEL_NOISE: ClusterLabel = -1
 CLUSTER_LABEL_FIRST_CLUSTER: ClusterLabel = 0
 
-
+# This file seems to map Objects to labels and vice versa.  It works on the Object objects, not the actual hashed object
 class LabelHandler:
     def __init__(self):
         self._label_to_objects = defaultdict(set)

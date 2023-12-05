@@ -20,8 +20,11 @@ class Objects(LabelHandler):
         id_ = hash_(value)
         return self.objects.get(id_)
 
-    def insert_object(self, value):
-        id_ = hash_(value)
+    def get_object_by_id(self, id_):
+        return self.objects.get(id_)
+
+    def insert_object(self, value, id_=None):
+        id_ = id_ if id_ is not None else hash_(value)
 
         if id_ in self.objects:
             obj = self.objects[id_]
@@ -55,6 +58,15 @@ class Objects(LabelHandler):
             self.neighbor_searcher.delete(obj.id)
             self._update_neighbors_during_deletion(obj)
             self.delete_label_of_deleted_object(obj)
+
+    def delete_object_by_id(self, id_):
+        obj = self.objects.get(id_)
+        if obj:
+            self.delete_object(obj)
+        else:
+            # You can choose to raise an error or simply return a message
+            # depending on how you want your system to handle such cases.
+            raise ValueError(f"No object found with ID {id_}")
 
     @staticmethod
     def _update_neighbors_during_deletion(object_deleted):

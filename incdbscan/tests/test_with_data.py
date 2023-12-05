@@ -29,15 +29,20 @@ def test_same_results_as_sklearn_dbscan():
     labels_dbscan = dbscan.fit_predict(data)
 
     incdbscan = IncrementalDBSCAN(eps=EPS, min_pts=MIN_PTS)
-    labels_incdbscan_1 = incdbscan.insert(data).get_cluster_labels(data)
+    incdbscan.insert(data)
+    labels_incdbscan_1 = incdbscan.get_cluster_labels(data)
+
     assert are_lists_isomorphic(labels_dbscan, labels_incdbscan_1)
 
-    labels_incdbscan_2 = \
-        incdbscan.insert(data).delete(data).get_cluster_labels(data)
+    incdbscan.insert(data)
+    incdbscan.delete(data)
+    labels_incdbscan_2 = incdbscan.get_cluster_labels(data)
     assert are_lists_isomorphic(labels_dbscan, labels_incdbscan_2)
 
     np.random.seed(123)
     noise = np.random.uniform(-14, 14, (1000, 2))
-    labels_incdbscan_3 = \
-        incdbscan.insert(noise).delete(noise).get_cluster_labels(data)
+
+    incdbscan.insert(noise)
+    incdbscan.delete(noise)
+    labels_incdbscan_3 = incdbscan.get_cluster_labels(data)
     assert are_lists_isomorphic(labels_dbscan, labels_incdbscan_3)

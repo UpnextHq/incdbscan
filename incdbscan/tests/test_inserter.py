@@ -12,6 +12,15 @@ from testutils import (
 )
 
 
+def test_basic_id_support(incdbscan4, object_far_away):
+    id1 = "id1"
+    incdbscan4.insert(object_far_away, [id1])
+
+    labels = incdbscan4.get_cluster_labels_by_ids([id1])
+    assert np.all(
+        labels == [CLUSTER_LABEL_NOISE]
+    )
+
 def test_new_single_object_is_labeled_as_noise(incdbscan4, object_far_away):
     incdbscan4.insert(object_far_away)
     assert_cluster_labels(incdbscan4, object_far_away, CLUSTER_LABEL_NOISE)
