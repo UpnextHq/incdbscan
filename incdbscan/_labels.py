@@ -1,11 +1,13 @@
 from collections import defaultdict
 
+from incdbscan._object import ObjectId
 
 ClusterLabel = int
 
 CLUSTER_LABEL_UNCLASSIFIED: ClusterLabel = -2
 CLUSTER_LABEL_NOISE: ClusterLabel = -1
 CLUSTER_LABEL_FIRST_CLUSTER: ClusterLabel = 0
+
 
 # This file seems to map Objects to labels and vice versa.  It works on the Object objects, not the actual hashed object
 class LabelHandler:
@@ -33,6 +35,9 @@ class LabelHandler:
 
     def get_label(self, obj):
         return self._object_to_label[obj]
+
+    def get_objects_for_label(self, label: ObjectId):
+        return self._label_to_objects[label]
 
     def get_next_cluster_label(self):
         return max(self._label_to_objects.keys()) + 1

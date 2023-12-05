@@ -223,5 +223,9 @@ class IncrementalDBSCAN:
 
         return labels
 
+    def get_object_ids_for_label(self, label: int) -> List[ObjectId]:
+        res = self._objects.get_objects_for_label(label)
+        return list(map(lambda o: o.id, res))
+
 class IncrementalDBSCANWarning(Warning):
     pass
