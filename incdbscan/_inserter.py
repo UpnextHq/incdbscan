@@ -21,6 +21,8 @@ class InsertionModifications:
     merged: Set[MergeOperation] = dataclasses.field(default_factory=set)
     expanded: Dict[int, Set] = dataclasses.field(default_factory=dict)
 
+    def __len__(self):
+        return len(self.added) + len(self.merged) + len(self.expanded)
 
 class Inserter:
     def __init__(self, eps, min_pts, objects):
