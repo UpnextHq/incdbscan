@@ -60,7 +60,7 @@ class Inserter:
                 label_of_new_object = CLUSTER_LABEL_NOISE
 
             self.objects.set_label(object_inserted, label_of_new_object)
-            return
+            return operations
 
         update_seeds = self._get_update_seeds(new_core_neighbors)
 

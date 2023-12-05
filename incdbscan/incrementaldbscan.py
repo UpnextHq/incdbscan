@@ -88,7 +88,7 @@ class IncrementalDBSCAN:
             mods = self._inserter.insert(value, id_)
             modifications.append(mods)
 
-        return mods
+        return modifications
 
     def delete(self, X):
         """Delete objects from object set, then update clustering.
