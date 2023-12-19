@@ -1,4 +1,5 @@
 import dataclasses
+from collections import defaultdict
 from typing import Set, Dict
 
 import networkx as nx
@@ -19,7 +20,7 @@ class MergeOperation:
 class InsertionModifications:
     added: Set[int] = dataclasses.field(default_factory=set)
     merged: Set[MergeOperation] = dataclasses.field(default_factory=set)
-    expanded: Dict[int, Set] = dataclasses.field(default_factory=dict)
+    expanded: Dict[int, Set] = dataclasses.field(default_factory=lambda: defaultdict(lambda: set()))
 
     def __len__(self):
         return len(self.added) + len(self.merged) + len(self.expanded)
@@ -50,9 +51,6 @@ class Inserter:
                 label_of_new_object = max([
                     self.objects.get_label(obj) for obj in old_core_neighbors
                 ])
-
-                if label_of_new_object not in operations.expanded:
-                    operations.expanded[label_of_new_object] = set()
 
                 operations.expanded[label_of_new_object].add(object_inserted.id)
             else:
@@ -91,10 +89,14 @@ class Inserter:
                 max_label = max(effective_cluster_labels)
                 self.objects.set_labels(component, max_label)
 
-                for label in effective_cluster_labels:
-                    if label != max_label:
-                        operations.merged.add(MergeOperation(source=label, destination=max_label))
+                # Because we're inserting, we always need to mark that new object was expanded
+                operations.expanded[max_label].add(object_inserted.id)
 
+                for label in effective_cluster_labels:
+                    if label == max_label:
+                        continue
+
+                    operations.merged.add(MergeOperation(source=label, destination=max_label))
                     self.objects.change_labels(label, max_label)
 
         # Finally all neighbors of each new core object inherits a label from
