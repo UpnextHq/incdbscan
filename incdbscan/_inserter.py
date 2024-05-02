@@ -103,7 +103,7 @@ class Inserter:
         # its new core neighbor, thereby affecting border and noise objects,
         # and the object being inserted.
 
-        self._set_cluster_label_around_new_core_neighbors(new_core_neighbors)
+        self._set_cluster_label_around_new_core_neighbors(new_core_neighbors, operations)
 
         return operations
 
@@ -161,7 +161,18 @@ class Inserter:
 
         return effective_cluster_labels
 
-    def _set_cluster_label_around_new_core_neighbors(self, new_core_neighbors):
+    def _set_cluster_label_around_new_core_neighbors(
+        self, new_core_neighbors, operations
+    ):
         for obj in new_core_neighbors:
             label = self.objects.get_label(obj)
+
+            for neighbor in obj.neighbors:
+                neighbor_label = self.objects.get_label(neighbor)
+                if self.objects.get_label(neighbor) != label:
+                    if neighbor_label == CLUSTER_LABEL_NOISE:
+                        operations.expanded[label].add(neighbor.id)
+                    else:
+                        operations.merged.add(MergeOperation(source=neighbor_label, destination=label))
+
             self.objects.set_labels(obj.neighbors, label)
