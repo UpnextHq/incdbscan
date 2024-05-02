@@ -139,7 +139,8 @@ class IncrementalDBSCAN:
 
         for id_ in ids:
             try:
-                self._objects.delete_object_by_id(id_)
+                obj = self._objects.get_object_by_id(id_)
+                self._deleter.delete(obj)
             except ValueError as e:
                 warnings.warn(
                     IncrementalDBSCANWarning(str(e))
