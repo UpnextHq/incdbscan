@@ -10,6 +10,8 @@ from ._labels import (
 )
 
 
+# frozen=True automatically adds eq and hash methods based on the values
+# so we can compare and dedupe merge operations with equality
 @dataclasses.dataclass(frozen=True)
 class MergeOperation:
     source: int
@@ -87,10 +89,17 @@ class Inserter:
                 # Corresponds to cases "Absorption" and "Merge" in the paper.
 
                 max_label = max(effective_cluster_labels)
-                self.objects.set_labels(component, max_label)
 
-                # Because we're inserting, we always need to mark that new object was expanded
-                operations.expanded[max_label].add(object_inserted.id)
+                for node in component:
+                    node_label = self.objects.get_label(node)
+                    if node_label != max_label:
+                        # We want to mark the new entry (unclassified) and the noise labels as expansion
+                        # nodes.  Node in the component list can also be part of existing clusters, but
+                        # this should be handled in the merge operation below.
+                        if node_label == CLUSTER_LABEL_NOISE or node_label == CLUSTER_LABEL_UNCLASSIFIED:
+                            operations.expanded[max_label].add(node.id)
+
+                self.objects.set_labels(component, max_label)
 
                 for label in effective_cluster_labels:
                     if label == max_label:
@@ -103,7 +112,7 @@ class Inserter:
         # its new core neighbor, thereby affecting border and noise objects,
         # and the object being inserted.
 
-        self._set_cluster_label_around_new_core_neighbors(new_core_neighbors, operations)
+        self._set_cluster_label_around_new_core_neighbors(new_core_neighbors)
 
         return operations
 
@@ -161,18 +170,8 @@ class Inserter:
 
         return effective_cluster_labels
 
-    def _set_cluster_label_around_new_core_neighbors(
-        self, new_core_neighbors, operations
-    ):
+
+    def _set_cluster_label_around_new_core_neighbors(self, new_core_neighbors):
         for obj in new_core_neighbors:
             label = self.objects.get_label(obj)
-
-            for neighbor in obj.neighbors:
-                neighbor_label = self.objects.get_label(neighbor)
-                if self.objects.get_label(neighbor) != label:
-                    if neighbor_label == CLUSTER_LABEL_NOISE:
-                        operations.expanded[label].add(neighbor.id)
-                    else:
-                        operations.merged.add(MergeOperation(source=neighbor_label, destination=label))
-
             self.objects.set_labels(obj.neighbors, label)
