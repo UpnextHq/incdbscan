@@ -49,7 +49,10 @@ class Objects(LabelHandler):
         return new_object
 
     def _update_neighbors_during_insertion(self, object_inserted, new_value):
-        neighbors = self._get_neighbors(new_value)
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span('incdbscan_get_neighbors'):
+            neighbors = self._get_neighbors(new_value)
+
         for obj in neighbors:
             obj.neighbors.add(object_inserted)
             object_inserted.neighbors.add(obj)

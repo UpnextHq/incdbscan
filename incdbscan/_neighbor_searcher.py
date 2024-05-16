@@ -1,4 +1,5 @@
 import numpy as np
+from opentelemetry import trace
 from sklearn.neighbors import NearestNeighbors
 from sortedcontainers import SortedList
 
@@ -15,7 +16,10 @@ class NeighborSearcher:
         position = self.ids.index(new_id)
 
         self._insert_into_array(new_value, position)
-        self.neighbor_searcher = self.neighbor_searcher.fit(self.values)
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span('incdbscan_insert_neighborhood_searcher_fit'):
+            self.neighbor_searcher = self.neighbor_searcher.fit(self.values)
 
     def _insert_into_array(self, new_value, position):
         extended = np.insert(self.values, position, new_value, axis=0)
