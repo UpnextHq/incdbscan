@@ -44,7 +44,7 @@ class NeighborSearcher:
         query_value = np.array([query_value], dtype=np.float32)
         faiss.normalize_L2(query_value)
 
-        _, _, neighbors = self.neighbor_searcher.range_search(query_value, self.radius, result)
+        _, _, neighbors = self.neighbor_searcher.range_search(query_value, self.radius)
 
         for n_id in neighbors:
             yield self.ids[self.ids.index(n_id)]
