@@ -29,8 +29,10 @@ class NeighborSearcher:
 
         tracer = trace.get_tracer(__name__)
         with tracer.start_as_current_span('incdbscan_insert_neighborhood_searcher_fit'):
-            new_value = faiss.normalize_L2([new_value])
-            self.neighbor_searcher.add_with_ids(new_value, new_id)
+            new_value = np.array([new_value], dtype=np.float32)
+            faiss.normalize_L2(new_value)
+
+            self.neighbor_searcher.add_with_ids(new_value, np.array([new_id], dtype='int64'))
 
     def _insert_into_array(self, new_value, position):
         extended = np.insert(self.values, position, new_value, axis=0)
@@ -39,7 +41,8 @@ class NeighborSearcher:
         self.values = extended
 
     def query_neighbors(self, query_value):
-        query_value = faiss.normalize_L2([query_value])
+        query_value = np.array([query_value], dtype=np.float32)
+        faiss.normalize_L2(query_value)
 
         result = faiss.RangeSearchResult(1)
         self.neighbor_searcher.range_search(query_value, self.radius, result)
@@ -55,7 +58,7 @@ class NeighborSearcher:
         self.values = np.delete(self.values, position, axis=0)
 
     def remake_index(self):
-        if len(self.ids) < BRUTE_FORCE_CUTOFF:
+        if len(self.ids) < BRUTE_FORCE_CUTOFF == 0:
             new_index = faiss.IndexFlatIP(self.num_dims)
         else:
             num_clusters = 100
