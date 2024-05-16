@@ -12,11 +12,11 @@ from ._utils import hash_
 
 
 class Objects(LabelHandler):
-    def __init__(self, eps, metric, p):
+    def __init__(self, eps, num_dims):
         super().__init__()
         self.objects: Dict[ObjectId, Object] = {}
         self.neighbor_searcher = \
-            NeighborSearcher(radius=eps, metric=metric, p=p)
+            NeighborSearcher(radius=eps, num_dims=num_dims)
 
     def get_object(self, value):
         id_ = hash_(value)
