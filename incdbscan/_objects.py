@@ -27,7 +27,7 @@ class Objects(LabelHandler):
 
     def insert_object(self, value, id_=None):
         tracer = trace.get_tracer(__name__)
-
+        
         id_ = id_ if id_ is not None else hash_(value)
 
         if id_ in self.objects:
@@ -35,17 +35,17 @@ class Objects(LabelHandler):
             obj.count += 1
             return obj
 
-        with tracer.start_span('incdbscan_insert_add_new_object'):
+        with tracer.start_as_current_span('incdbscan_insert_add_new_object'):
             new_object = Object(id_)
             self.objects[id_] = new_object
             self.set_label_of_inserted_object(new_object)
 
-        with tracer.start_span('incdbscan_insert_neighborhood_searcher_insert'):
+        with tracer.start_as_current_span('incdbscan_insert_neighborhood_searcher_insert'):
             self.neighbor_searcher.insert(value, id_)
 
-        with tracer.start_span('incdbscan_insert_update_neighbors'):
+        with tracer.start_as_current_span('incdbscan_insert_update_neighbors'):
             self._update_neighbors_during_insertion(new_object, value)
-
+            
         return new_object
 
     def _update_neighbors_during_insertion(self, object_inserted, new_value):

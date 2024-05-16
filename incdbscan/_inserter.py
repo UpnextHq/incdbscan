@@ -38,14 +38,14 @@ class Inserter:
         tracer = trace.get_tracer(__name__)
 
         operations = InsertionModifications()
-        with tracer.start_span("incdbscan_insert_object"):
+        with tracer.start_as_current_span("incdbscan_insert_object"):
             object_inserted = self.objects.insert_object(object_value, id_)
 
-        with tracer.start_span("incdbscan_separate_neighbors"):
+        with tracer.start_as_current_span("incdbscan_separate_neighbors"):
             new_core_neighbors, old_core_neighbors = \
                 self._separate_core_neighbors_by_novelty(object_inserted)
 
-        with tracer.start_span("incdbscan_insert_only_new_object"):
+        with tracer.start_as_current_span("incdbscan_insert_only_new_object"):
             if not new_core_neighbors:
                 # If there is no new core object, only the new object has to be
                 # put in a cluster.
@@ -70,15 +70,15 @@ class Inserter:
                 self.objects.set_label(object_inserted, label_of_new_object)
                 return operations
 
-        with tracer.start_span("incdbscan_insert_object_and_combine_clusters"):
-            with tracer.start_span("incdbscan_get_update_seeds"):
+        with tracer.start_as_current_span("incdbscan_insert_object_and_combine_clusters"):
+            with tracer.start_as_current_span("incdbscan_get_update_seeds"):
                 update_seeds = self._get_update_seeds(new_core_neighbors)
 
-            with tracer.start_span("incdbscan_get_connected_components"):
+            with tracer.start_as_current_span("incdbscan_get_connected_components"):
                 connected_components_in_update_seeds = \
                     self._get_connected_components(update_seeds)
 
-            with tracer.start_span("incdbscan_combine_clusters"):
+            with tracer.start_as_current_span("incdbscan_combine_clusters"):
                 for component in connected_components_in_update_seeds:
                     effective_cluster_labels = \
                         self._get_effective_cluster_labels_of_objects(component)
@@ -122,7 +122,7 @@ class Inserter:
             # its new core neighbor, thereby affecting border and noise objects,
             # and the object being inserted.
 
-            with tracer.start_span("incdbscan_update_cluster_labels_after_combine_clusters"):
+            with tracer.start_as_current_span("incdbscan_update_cluster_labels_after_combine_clusters"):
                 self._set_cluster_label_around_new_core_neighbors(new_core_neighbors)
 
         return operations
