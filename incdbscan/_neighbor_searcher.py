@@ -6,6 +6,7 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import normalize
 from sortedcontainers import SortedList
 
+BRUTE_FORCE_CUTOFF = 5000
 
 class NeighborSearcher:
     def __init__(self, radius, num_dims):
@@ -25,7 +26,7 @@ class NeighborSearcher:
 
         self._insert_into_array(new_value, position)
 
-        if len(self.values) % 5000:
+        if len(self.values) % BRUTE_FORCE_CUTOFF:
             self.remake_index()
 
         tracer = trace.get_tracer(__name__)
@@ -41,10 +42,10 @@ class NeighborSearcher:
 
     def query_neighbors(self, query_value):
         query_value = normalize([query_value])
-        _, _, neighbor_indices = self.neighbor_searcher.range_search(query_value, self.radius)
+        _, _, neighbor_ids = self.neighbor_searcher.range_search(query_value, self.radius)
 
-        for ix in neighbor_indices:
-            yield self.ids[ix]
+        for nid in neighbor_ids:
+            yield self.ids[self.ids.index(nid)]
 
     def delete(self, id_):
         self.neighbor_searcher.remove_ids(np.array([id_], dtype=np.int64))
@@ -54,7 +55,7 @@ class NeighborSearcher:
         self.values = np.delete(self.values, position, axis=0)
 
     def remake_index(self):
-        if len(self.ids) < 5000:
+        if len(self.ids) < BRUTE_FORCE_CUTOFF:
             new_index = faiss.IndexFlatIP(self.num_dims)
         else:
             num_clusters = 100
