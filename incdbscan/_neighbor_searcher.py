@@ -24,7 +24,7 @@ class NeighborSearcher:
 
         self._insert_into_array(new_value, position)
 
-        if len(self.values) % BRUTE_FORCE_CUTOFF:
+        if len(self.values) % BRUTE_FORCE_CUTOFF == 0:
             self.remake_index()
 
         tracer = trace.get_tracer(__name__)
@@ -45,7 +45,6 @@ class NeighborSearcher:
         faiss.normalize_L2(query_value)
 
         _, _, neighbors = self.neighbor_searcher.range_search(query_value, self.radius)
-
         for n_id in neighbors:
             yield self.ids[self.ids.index(n_id)]
 
@@ -57,12 +56,12 @@ class NeighborSearcher:
         self.values = np.delete(self.values, position, axis=0)
 
     def remake_index(self):
-        if len(self.ids) < BRUTE_FORCE_CUTOFF == 0:
+        if len(self.ids) < BRUTE_FORCE_CUTOFF:
             new_index = faiss.IndexFlatIP(self.num_dims)
         else:
-            num_clusters = 100
+            num_centroids = len(self.ids) / 39
             quantizer = faiss.IndexFlatIP(self.num_dims)  # the quantizer for inner product
-            new_index = faiss.IndexIVFFlat(quantizer, self.num_dims, num_clusters, faiss.METRIC_INNER_PRODUCT)
+            new_index = faiss.IndexIVFFlat(quantizer, self.num_dims, num_centroids, faiss.METRIC_INNER_PRODUCT)
             new_index.nprobe = 20
 
             new_index.train(self.values)
