@@ -2,8 +2,6 @@ import faiss
 import numpy as np
 from faiss import IndexIDMap
 from opentelemetry import trace
-from sklearn.neighbors import NearestNeighbors
-from sklearn.preprocessing import normalize
 from sortedcontainers import SortedList
 
 BRUTE_FORCE_CUTOFF = 5000
@@ -31,7 +29,7 @@ class NeighborSearcher:
 
         tracer = trace.get_tracer(__name__)
         with tracer.start_as_current_span('incdbscan_insert_neighborhood_searcher_fit'):
-            new_value = normalize([new_value])
+            new_value = faiss.normalize_L2([new_value])
             self.neighbor_searcher.add_with_ids(new_value, new_id)
 
     def _insert_into_array(self, new_value, position):
@@ -41,11 +39,13 @@ class NeighborSearcher:
         self.values = extended
 
     def query_neighbors(self, query_value):
-        query_value = normalize([query_value])
-        _, _, neighbor_ids = self.neighbor_searcher.range_search(query_value, self.radius)
+        query_value = faiss.normalize_L2([query_value])
 
-        for nid in neighbor_ids:
-            yield self.ids[self.ids.index(nid)]
+        result = faiss.RangeSearchResult(1)
+        self.neighbor_searcher.range_search(query_value, self.radius, result)
+
+        for n_id in result.labels[0]:
+            yield self.ids[self.ids.index(n_id)]
 
     def delete(self, id_):
         self.neighbor_searcher.remove_ids(np.array([id_], dtype=np.int64))
