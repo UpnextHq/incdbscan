@@ -4,7 +4,8 @@ from faiss import IndexIDMap
 from opentelemetry import trace
 from sortedcontainers import SortedList
 
-BRUTE_FORCE_CUTOFF = 2000
+BRUTE_FORCE_CUTOFF = 1000
+
 
 class NeighborSearcher:
     def __init__(self, radius, num_dims):
