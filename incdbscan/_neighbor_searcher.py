@@ -4,7 +4,7 @@ from faiss import IndexIDMap
 from opentelemetry import trace
 from sortedcontainers import SortedList
 
-BRUTE_FORCE_CUTOFF = 5000
+BRUTE_FORCE_CUTOFF = 2000
 
 class NeighborSearcher:
     def __init__(self, radius, num_dims):
@@ -59,7 +59,7 @@ class NeighborSearcher:
         if len(self.ids) < BRUTE_FORCE_CUTOFF:
             new_index = faiss.IndexFlatIP(self.num_dims)
         else:
-            num_centroids = len(self.ids) / 39
+            num_centroids = int(len(self.ids) / 39)
             quantizer = faiss.IndexFlatIP(self.num_dims)  # the quantizer for inner product
             new_index = faiss.IndexIVFFlat(quantizer, self.num_dims, num_centroids, faiss.METRIC_INNER_PRODUCT)
             new_index.nprobe = 20
