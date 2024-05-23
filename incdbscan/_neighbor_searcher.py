@@ -26,12 +26,13 @@ class NeighborSearcher:
 
         self.ids.append(new_id)
 
-        new_value = np.array(new_value, dtype=np.float32).reshape(1, -1)
-        faiss.normalize_L2(new_value)
-        self._insert_into_array(new_value)
-
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span('incdbscan_insert_neighborhood_searcher_fit'):
+        with tracer.start_as_current_span('incdbscan_insert_neighborhood_searcher_insert_add_to_values'):
+            new_value = np.array(new_value, dtype=np.float32).reshape(1, -1)
+            faiss.normalize_L2(new_value)
+            self._insert_into_array(new_value)
+
+        with tracer.start_as_current_span('incdbscan_insert_neighborhood_searcher_insert_add'):
             self.neighbor_searcher.add(new_value)
 
     def _insert_into_array(self, new_value):
