@@ -1,3 +1,5 @@
+import logging
+
 import faiss
 import numpy as np
 from opentelemetry import trace
@@ -7,6 +9,7 @@ BRUTE_FORCE_CUTOFF = 1000
 TOMBSTONE_ID = -1
 
 tracer = trace.get_tracer(__name__)
+logger = logging.getLogger(__name__)
 
 class NeighborSearcher:
     def __init__(self, radius, num_dims):
@@ -54,30 +57,33 @@ class NeighborSearcher:
         self.ids[pos] = TOMBSTONE_ID
 
     def remake_index(self):
-        if len(self.ids) < BRUTE_FORCE_CUTOFF:
-            new_index = faiss.IndexFlatIP(self.num_dims)
-        else:
-            num_centroids = int(len(self.ids) / 39)
-            quantizer = faiss.IndexFlatIP(self.num_dims)  # the quantizer for inner product
-            new_index = faiss.IndexIVFFlat(quantizer, self.num_dims, num_centroids, faiss.METRIC_INNER_PRODUCT)
-            new_index.nprobe = 20
+        with tracer.start_as_current_span('incdbscan_insert_neighborhood_searcher_insert_remake_index'):
+            logger.info("Remaking neighbor index")
 
-            new_index.train(self.values)
+            if len(self.ids) < BRUTE_FORCE_CUTOFF:
+                new_index = faiss.IndexFlatIP(self.num_dims)
+            else:
+                num_centroids = int(len(self.ids) / 39)
+                quantizer = faiss.IndexFlatIP(self.num_dims)  # the quantizer for inner product
+                new_index = faiss.IndexIVFFlat(quantizer, self.num_dims, num_centroids, faiss.METRIC_INNER_PRODUCT)
+                new_index.nprobe = 20
 
-        self.neighbor_searcher = new_index
+                new_index.train(self.values)
 
-        orig_ids = self.ids
-        orig_values = self.values
+            self.neighbor_searcher = new_index
 
-        self.values = np.empty((0, self.num_dims), dtype=np.float32)  # Ensure values is reset with the correct shape
-        self.ids = []
+            orig_ids = self.ids
+            orig_values = self.values
 
-        for orig_id, orig_val in zip(orig_ids, orig_values):
-            if orig_id == TOMBSTONE_ID:
-                continue
+            self.values = np.empty((0, self.num_dims), dtype=np.float32)  # Ensure values is reset with the correct shape
+            self.ids = []
 
-            self._insert_into_array(orig_val)
-            self.ids.append(orig_id)
+            for orig_id, orig_val in zip(orig_ids, orig_values):
+                if orig_id == TOMBSTONE_ID:
+                    continue
 
-        if self.values.size > 0:
-            self.neighbor_searcher.add(self.values)
+                self._insert_into_array(orig_val)
+                self.ids.append(orig_id)
+
+            if self.values.size > 0:
+                self.neighbor_searcher.add(self.values)
