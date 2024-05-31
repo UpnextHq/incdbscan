@@ -1,3 +1,4 @@
+import logging
 import multiprocessing
 
 import faiss
@@ -9,7 +10,7 @@ BRUTE_FORCE_CUTOFF = 1000
 TOMBSTONE_ID = -1
 
 tracer = trace.get_tracer(__name__)
-
+logger = logging.getLogger(__name__)
 
 class NeighborSearcher:
     def __init__(self, radius, num_dims):
@@ -36,6 +37,7 @@ class NeighborSearcher:
             self._insert_into_array(new_value)
 
         with tracer.start_as_current_span('incdbscan_insert_neighborhood_searcher_insert_add'):
+            logger.info("Adding vector to neighborhood searcher", extra={'vec': new_value})
             self.neighbor_searcher.add(new_value)
 
     def _insert_into_array(self, new_value):
