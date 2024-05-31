@@ -8,6 +8,9 @@ BRUTE_FORCE_CUTOFF = 1000
 
 TOMBSTONE_ID = -1
 
+tracer = trace.get_tracer(__name__)
+
+
 class NeighborSearcher:
     def __init__(self, radius, num_dims):
         self.radius = radius
@@ -22,11 +25,11 @@ class NeighborSearcher:
 
     def insert(self, new_value, new_id):
         if len(self.values) % BRUTE_FORCE_CUTOFF == 0:
-            self.remake_index()
+            with tracer.start_as_current_span('incdbscan_insert_neighborhood_searcher_insert_remake_index'):
+                self.remake_index()
 
         self.ids.append(new_id)
 
-        tracer = trace.get_tracer(__name__)
         with tracer.start_as_current_span('incdbscan_insert_neighborhood_searcher_insert_add_to_values'):
             new_value = np.array(new_value, dtype=np.float32).reshape(1, -1)
             faiss.normalize_L2(new_value)
