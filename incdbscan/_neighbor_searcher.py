@@ -68,7 +68,8 @@ class NeighborSearcher:
                 new_index = faiss.IndexIVFFlat(quantizer, self.num_dims, num_centroids, faiss.METRIC_INNER_PRODUCT)
                 new_index.nprobe = 20
 
-                new_index.train(self.values)
+                with tracer.start_as_current_span('incdbscan_insert_neighborhood_searcher_insert_remake_index_train'):
+                    new_index.train(self.values)
 
             self.neighbor_searcher = new_index
 
@@ -85,5 +86,7 @@ class NeighborSearcher:
                 self._insert_into_array(orig_val)
                 self.ids.append(orig_id)
 
-            if self.values.size > 0:
-                self.neighbor_searcher.add(self.values)
+            logger.info("Adding values to existing index")
+            with tracer.start_as_current_span('incdbscan_insert_neighborhood_searcher_insert_remake_index_add_values'):
+                if self.values.size > 0:
+                    self.neighbor_searcher.add(self.values)
