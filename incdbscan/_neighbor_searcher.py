@@ -18,7 +18,9 @@ class NeighborSearcher:
 
         self.num_dims = num_dims
 
-        self.values = np.empty((0, num_dims), dtype=np.float32)
+        self.values_batch_size = 1000
+        self.values = np.empty((self.values_batch_size, num_dims), dtype=np.float32)
+        self.values_count = 0
         self.ids = []
 
         self.neighbor_searcher = None
@@ -41,7 +43,11 @@ class NeighborSearcher:
             self.neighbor_searcher.add(new_value)
 
     def _insert_into_array(self, new_value):
-        self.values = np.vstack((self.values, new_value))
+        if self.values_count == self.values.shape[0]:
+            self.values = np.vstack((self.values, np.empty((self.values_batch_size, self.num_dims), dtype=np.float32)))
+
+        self.values[self.values_count] = new_value
+        self.values_count += 1
 
     def query_neighbors(self, query_value):
         query_value = np.array([query_value], dtype=np.float32)
@@ -71,14 +77,15 @@ class NeighborSearcher:
                 new_index.nprobe = 20
 
                 with tracer.start_as_current_span('incdbscan_insert_neighborhood_searcher_insert_remake_index_train'):
-                    new_index.train(self.values)
+                    new_index.train(self.values[:self.values_count])
 
             self.neighbor_searcher = new_index
 
             orig_ids = self.ids
-            orig_values = self.values
+            orig_values = self.values[:self.values_count]
 
-            self.values = np.empty((0, self.num_dims), dtype=np.float32)  # Ensure values is reset with the correct shape
+            self.values = np.empty((self.values_batch_size, self.num_dims), dtype=np.float32)
+            self.values_count = 0
             self.ids = []
 
             for orig_id, orig_val in zip(orig_ids, orig_values):
@@ -90,5 +97,5 @@ class NeighborSearcher:
 
             logger.info("Adding values to existing index")
             with tracer.start_as_current_span('incdbscan_insert_neighborhood_searcher_insert_remake_index_add_values'):
-                if self.values.size > 0:
-                    self.neighbor_searcher.add(self.values)
+                if self.values_count > 0:
+                    self.neighbor_searcher.add(self.values[:self.values_count])
