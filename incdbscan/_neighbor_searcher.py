@@ -5,6 +5,7 @@ import numpy as np
 from opentelemetry import trace
 
 BRUTE_FORCE_CUTOFF = 1000
+REMAKE_INDEX_INTERVAL = 5000
 
 TOMBSTONE_ID = -1
 
@@ -24,8 +25,9 @@ class NeighborSearcher:
         self.remake_index()
 
     def insert(self, new_value, new_id):
-        if len(self.values) % BRUTE_FORCE_CUTOFF == 0:
-            with tracer.start_as_current_span('incdbscan_insert_neighborhood_searcher_insert_remake_index'):
+        with tracer.start_as_current_span('incdbscan_insert_neighborhood_searcher_insert_remake_index'):
+            remake_multiple = BRUTE_FORCE_CUTOFF if len(self.values) < 15000 else REMAKE_INDEX_INTERVAL
+            if len(self.values) % remake_multiple == 0:
                 self.remake_index()
 
         self.ids.append(new_id)
