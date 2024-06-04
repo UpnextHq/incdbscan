@@ -29,7 +29,7 @@ class NeighborSearcher:
     def insert(self, new_value, new_id):
         with tracer.start_as_current_span('incdbscan_insert_neighborhood_searcher_insert_remake_index'):
             remake_multiple = BRUTE_FORCE_CUTOFF if len(self.values) < 15000 else REMAKE_INDEX_INTERVAL
-            if len(self.values) % remake_multiple == 0:
+            if self.values_count % remake_multiple == 0:
                 self.remake_index()
 
         self.ids.append(new_id)
@@ -68,10 +68,10 @@ class NeighborSearcher:
         with tracer.start_as_current_span('incdbscan_insert_neighborhood_searcher_insert_remake_index'):
             logger.info("Remaking neighbor index")
 
-            if len(self.ids) < BRUTE_FORCE_CUTOFF:
+            if self.values_count < BRUTE_FORCE_CUTOFF:
                 new_index = faiss.IndexFlatIP(self.num_dims)
             else:
-                num_centroids = int(len(self.ids) / 39)
+                num_centroids = int(self.values_count / 39)
                 quantizer = faiss.IndexFlatIP(self.num_dims)  # the quantizer for inner product
                 new_index = faiss.IndexIVFFlat(quantizer, self.num_dims, num_centroids, faiss.METRIC_INNER_PRODUCT)
                 new_index.nprobe = 20
