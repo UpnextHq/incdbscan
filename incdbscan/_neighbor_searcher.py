@@ -44,11 +44,12 @@ class NeighborSearcher:
         self.values[self.values_count] = new_value
         self.values_count += 1
 
-    def query_neighbors(self, query_value):
+    def query_neighbors(self, query_value, radius=None):
         query_value = np.array([query_value], dtype=np.float32)
         faiss.normalize_L2(query_value)
 
-        _, _, neighbors = self.neighbor_searcher.range_search(query_value, 1 - self.radius)
+        search_radius = self.radius if radius is None else radius
+        _, _, neighbors = self.neighbor_searcher.range_search(query_value, 1 - search_radius)
         for n_idx in neighbors:
             if self.ids[n_idx] == TOMBSTONE_ID:
                 continue

@@ -227,5 +227,9 @@ class IncrementalDBSCAN:
         res = self._objects.get_objects_for_label(label)
         return list(map(lambda o: o.id, res))
 
+    # Returns IDs within the specified radius
+    def query_neighbors(self, query_value, radius: float):
+        return self._objects.neighbor_searcher.query_neighbors(query_value, radius)
+
 class IncrementalDBSCANWarning(Warning):
     pass
