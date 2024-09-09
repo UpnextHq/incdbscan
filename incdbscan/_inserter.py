@@ -111,7 +111,6 @@ class Inserter:
         # Finally all neighbors of each new core object inherits a label from
         # its new core neighbor, thereby affecting border and noise objects,
         # and the object being inserted.
-
         self._set_cluster_label_around_new_core_neighbors(new_core_neighbors)
 
         return operations

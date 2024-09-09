@@ -10,11 +10,11 @@ from ._utils import hash_
 
 
 class Objects(LabelHandler):
-    def __init__(self, eps, metric, p):
+    def __init__(self, eps, num_dims):
         super().__init__()
         self.objects: Dict[ObjectId, Object] = {}
         self.neighbor_searcher = \
-            NeighborSearcher(radius=eps, metric=metric, p=p)
+            NeighborSearcher(radius=eps, num_dims=num_dims)
 
     def get_object(self, value):
         id_ = hash_(value)
@@ -36,11 +36,14 @@ class Objects(LabelHandler):
         self.set_label_of_inserted_object(new_object)
 
         self.neighbor_searcher.insert(value, id_)
+
         self._update_neighbors_during_insertion(new_object, value)
+            
         return new_object
 
     def _update_neighbors_during_insertion(self, object_inserted, new_value):
         neighbors = self._get_neighbors(new_value)
+
         for obj in neighbors:
             obj.neighbors.add(object_inserted)
             object_inserted.neighbors.add(obj)

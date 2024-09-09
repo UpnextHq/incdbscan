@@ -51,13 +51,12 @@ class IncrementalDBSCAN:
 
     """
 
-    def __init__(self, eps=1, min_pts=5, metric='minkowski', p=2):
+    def __init__(self, num_dims, eps=1, min_pts=5):
         self.eps = eps
         self.min_pts = min_pts
-        self.metric = metric
-        self.p = p
+        self.num_dims = num_dims
 
-        self._objects = Objects(self.eps, self.metric, self.p)
+        self._objects = Objects(self.eps, self.num_dims)
         self._inserter = Inserter(self.eps, self.min_pts, self._objects)
         self._deleter = Deleter(self.eps, self.min_pts, self._objects)
 
