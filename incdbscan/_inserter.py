@@ -3,7 +3,6 @@ from collections import defaultdict
 from typing import Set, Dict
 
 import networkx as nx
-from opentelemetry import trace
 
 from ._labels import (
     CLUSTER_LABEL_NOISE,
@@ -35,95 +34,84 @@ class Inserter:
         self.objects = objects
 
     def insert(self, object_value, id_=None):
-        tracer = trace.get_tracer(__name__)
-
         operations = InsertionModifications()
-        with tracer.start_as_current_span("incdbscan_insert_object"):
-            object_inserted = self.objects.insert_object(object_value, id_)
+        object_inserted = self.objects.insert_object(object_value, id_)
 
-        with tracer.start_as_current_span("incdbscan_separate_neighbors"):
-            new_core_neighbors, old_core_neighbors = \
-                self._separate_core_neighbors_by_novelty(object_inserted)
+        new_core_neighbors, old_core_neighbors = \
+            self._separate_core_neighbors_by_novelty(object_inserted)
 
-        with tracer.start_as_current_span("incdbscan_insert_only_new_object"):
-            if not new_core_neighbors:
-                # If there is no new core object, only the new object has to be
-                # put in a cluster.
+        if not new_core_neighbors:
+            # If there is no new core object, only the new object has to be
+            # put in a cluster.
 
-                if old_core_neighbors:
-                    # If there are already core objects near to the new object,
-                    # the new object is put in the most recent cluster. This is
-                    # similar to case "Absorption" in the paper but not defined
-                    # there.
+            if old_core_neighbors:
+                # If there are already core objects near to the new object,
+                # the new object is put in the most recent cluster. This is
+                # similar to case "Absorption" in the paper but not defined
+                # there.
 
-                    label_of_new_object = max([
-                        self.objects.get_label(obj) for obj in old_core_neighbors
-                    ])
+                label_of_new_object = max([
+                    self.objects.get_label(obj) for obj in old_core_neighbors
+                ])
 
-                    operations.expanded[label_of_new_object].add(object_inserted.id)
-                else:
-                    # If the new object does not have any core neighbors,
-                    # it becomes a noise. Called case "Noise" in the paper.
+                operations.expanded[label_of_new_object].add(object_inserted.id)
+            else:
+                # If the new object does not have any core neighbors,
+                # it becomes a noise. Called case "Noise" in the paper.
 
-                    label_of_new_object = CLUSTER_LABEL_NOISE
+                label_of_new_object = CLUSTER_LABEL_NOISE
 
-                self.objects.set_label(object_inserted, label_of_new_object)
-                return operations
+            self.objects.set_label(object_inserted, label_of_new_object)
+            return operations
 
-        with tracer.start_as_current_span("incdbscan_insert_object_and_combine_clusters"):
-            with tracer.start_as_current_span("incdbscan_get_update_seeds"):
-                update_seeds = self._get_update_seeds(new_core_neighbors)
+        update_seeds = self._get_update_seeds(new_core_neighbors)
 
-            with tracer.start_as_current_span("incdbscan_get_connected_components"):
-                connected_components_in_update_seeds = \
-                    self._get_connected_components(update_seeds)
+        connected_components_in_update_seeds = \
+            self._get_connected_components(update_seeds)
 
-            with tracer.start_as_current_span("incdbscan_combine_clusters"):
-                for component in connected_components_in_update_seeds:
-                    effective_cluster_labels = \
-                        self._get_effective_cluster_labels_of_objects(component)
+        for component in connected_components_in_update_seeds:
+            effective_cluster_labels = \
+                self._get_effective_cluster_labels_of_objects(component)
 
-                    if not effective_cluster_labels:
-                        # If in a connected component of update seeds there are only
-                        # previously unclassified and noise objects, a new cluster is
-                        # created. Corresponds to case "Creation" in the paper.
+            if not effective_cluster_labels:
+                # If in a connected component of update seeds there are only
+                # previously unclassified and noise objects, a new cluster is
+                # created. Corresponds to case "Creation" in the paper.
 
-                        next_cluster_label = self.objects.get_next_cluster_label()
-                        self.objects.set_labels(component, next_cluster_label)
-                        operations.added.add(next_cluster_label)
+                next_cluster_label = self.objects.get_next_cluster_label()
+                self.objects.set_labels(component, next_cluster_label)
+                operations.added.add(next_cluster_label)
 
-                    else:
-                        # If in a connected component of update seeds there are
-                        # already clustered objects, all objects in the component
-                        # will be merged into the most recent cluster.
-                        # Corresponds to cases "Absorption" and "Merge" in the paper.
+            else:
+                # If in a connected component of update seeds there are
+                # already clustered objects, all objects in the component
+                # will be merged into the most recent cluster.
+                # Corresponds to cases "Absorption" and "Merge" in the paper.
 
-                        max_label = max(effective_cluster_labels)
+                max_label = max(effective_cluster_labels)
 
-                        for node in component:
-                            node_label = self.objects.get_label(node)
-                            if node_label != max_label:
-                                # We want to mark the new entry (unclassified) and the noise labels as expansion
-                                # nodes.  Node in the component list can also be part of existing clusters, but
-                                # this should be handled in the merge operation below.
-                                if node_label == CLUSTER_LABEL_NOISE or node_label == CLUSTER_LABEL_UNCLASSIFIED:
-                                    operations.expanded[max_label].add(node.id)
+                for node in component:
+                    node_label = self.objects.get_label(node)
+                    if node_label != max_label:
+                        # We want to mark the new entry (unclassified) and the noise labels as expansion
+                        # nodes.  Node in the component list can also be part of existing clusters, but
+                        # this should be handled in the merge operation below.
+                        if node_label == CLUSTER_LABEL_NOISE or node_label == CLUSTER_LABEL_UNCLASSIFIED:
+                            operations.expanded[max_label].add(node.id)
 
-                        self.objects.set_labels(component, max_label)
+                self.objects.set_labels(component, max_label)
 
-                        for label in effective_cluster_labels:
-                            if label == max_label:
-                                continue
+                for label in effective_cluster_labels:
+                    if label == max_label:
+                        continue
 
-                            operations.merged.add(MergeOperation(source=label, destination=max_label))
-                            self.objects.change_labels(label, max_label)
+                    operations.merged.add(MergeOperation(source=label, destination=max_label))
+                    self.objects.change_labels(label, max_label)
 
-            # Finally all neighbors of each new core object inherits a label from
-            # its new core neighbor, thereby affecting border and noise objects,
-            # and the object being inserted.
-
-            with tracer.start_as_current_span("incdbscan_update_cluster_labels_after_combine_clusters"):
-                self._set_cluster_label_around_new_core_neighbors(new_core_neighbors)
+        # Finally all neighbors of each new core object inherits a label from
+        # its new core neighbor, thereby affecting border and noise objects,
+        # and the object being inserted.
+        self._set_cluster_label_around_new_core_neighbors(new_core_neighbors)
 
         return operations
 
