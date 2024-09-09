@@ -47,7 +47,7 @@ class Deleter:
     # When we're deleting an entire cluster the rest of the clustering will remain intact, so we
     # can avoid the split logic that would occur by deleting each object individually
     def delete_cluster(self, cluster_label):
-        objects = self.objects.get_objects_for_label(cluster_label)
+        objects = list(self.objects.get_objects_for_label(cluster_label))
         for obj in objects:
             self.objects.delete_object(obj)
 
