@@ -44,6 +44,13 @@ class Deleter:
 
         self._is_core.cache_clear()
 
+    # When we're deleting an entire cluster the rest of the clustering will remain intact, so we
+    # can avoid the split logic that would occur by deleting each object individually
+    def delete_cluster(self, cluster_label):
+        objects = self.objects.get_objects_for_label(cluster_label)
+        for obj in objects:
+            self.objects.delete_object(obj)
+
     def _get_objects_that_lost_core_property(self, object_deleted):
         ex_core_neighbors = [obj for obj in object_deleted.neighbors
                              if obj.neighbor_count == self.min_pts - 1]
@@ -167,6 +174,7 @@ class Deleter:
             cluster_updates[obj] = max(labels)
 
         for obj, new_cluster_label in cluster_updates.items():
+            # TODO modification
             self.objects.set_label(obj, new_cluster_label)
 
     def _get_cluster_labels_in_neighborhood(self, obj):

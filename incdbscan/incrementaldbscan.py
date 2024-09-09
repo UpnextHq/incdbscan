@@ -147,6 +147,9 @@ class IncrementalDBSCAN:
 
         return self
 
+    def delete_by_cluster_label(self, cluster_label):
+        self._deleter.delete_cluster(cluster_label)
+
     def get_cluster_labels(self, X):
         """Get cluster labels of objects.
 
